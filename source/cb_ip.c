@@ -47,10 +47,13 @@ typedef struct {
     cbTIMER_Id lwipTimerId;
 } cbIP;
 
+typedef struct cbIP_Netif* cbIP_Netif;
+
 /*===========================================================================
  * DECLARATIONS
  *=========================================================================*/
 static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2);
+static cbIP_Netif* getNetif(cbIP_IPv4Address addr);
 
 /*===========================================================================
  * DEFINITIONS
@@ -125,7 +128,16 @@ cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbI
     return FALSE;
 }
 
-cbIP_Netif* cbIP_getNetif(cbIP_IPv4Address addr)
+void cbIP_setDefaultNetif(cbIP_IPv4Address addr)
+{
+    cbIP_Netif* netif = getNetif(addr);
+    if (netif != NULL)
+    {
+        netif_set_default((struct netif*)netif);
+    }
+}
+
+static cbIP_Netif* getNetif(cbIP_IPv4Address addr)
 {
     for (struct netif* netif = netif_list; netif != NULL; netif = netif->next)
     {
@@ -135,15 +147,6 @@ cbIP_Netif* cbIP_getNetif(cbIP_IPv4Address addr)
         }
     }
     return NULL;
-}
-
-void cbIP_setDefaultNetif(cbIP_IPv4Address addr)
-{
-    cbIP_Netif* netif = cbIP_getNetif(addr);
-    if (netif != NULL)
-    {
-        netif_set_default((struct netif*)netif);
-    }
 }
 
 /*===========================================================================

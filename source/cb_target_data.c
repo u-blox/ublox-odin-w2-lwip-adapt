@@ -69,8 +69,7 @@ void cbTARGET_freeDataFrame(cbTARGET_Handle *hTarget, cbTARGET_dataFrame* frame)
 
 cb_uint32 cbTARGET_getDataFrameSize(cbTARGET_Handle *hTarget, cbTARGET_dataFrame* frame)
 {
-    //return cbIP_getDataFrameSize((cbIP_frame*)frame);
-    return FALSE;
+    return cbIP_getDataFrameSize((cbIP_frame*)frame);
 }
 
 cb_uint8 cbTARGET_getDataFrameTID(cbTARGET_Handle *hTarget, cbTARGET_dataFrame* frame)

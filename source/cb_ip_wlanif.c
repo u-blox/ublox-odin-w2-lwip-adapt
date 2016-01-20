@@ -298,7 +298,7 @@ static void netif_status_callback(struct netif *netif)
     cbIP_IPv6Settings ipV6Settings;
 
 
-    ipV4Settings.address.value = netif->ip_addr.addr; // Todo change value to addr?? in cbIP address type
+    ipV4Settings.address.value = netif->ip_addr.addr;
     ipV4Settings.netmask.value = netif->netmask.addr;
     ipV4Settings.gateway.value = netif->gw.addr;
     ipV4Settings.dns0.value = dns_getserver(0).addr;
