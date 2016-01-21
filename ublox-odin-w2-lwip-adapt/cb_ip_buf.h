@@ -12,6 +12,10 @@
 
 #include "cb_comdefs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*===========================================================================
  * DEFINES
  *=========================================================================*/
@@ -105,5 +109,8 @@ typedef struct cbIP_Stats {
 
 void cbIP_getBufStats(cbIP_Stats* ipStats);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _CB_IP_BUF_H_ */

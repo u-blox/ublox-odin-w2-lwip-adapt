@@ -12,6 +12,10 @@
 
 #include "cb_comdefs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*===========================================================================
  * DEFINES
  *=========================================================================*/
@@ -136,5 +140,9 @@ cb_char* cbIP_UTIL_ip6addr_ntoa(const cbIP_IPv6Address *addr, char *buf, int buf
 cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbIP_addrResolvedCallback callback, void* arg);
 
 void cbIP_setDefaultNetif(cbIP_IPv4Address addr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _CB_IP_H_ */
