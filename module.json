@@ -17,7 +17,7 @@
   ],
   "dependencies": {
     "sal-stack-lwip-ublox-odin-w2": "*",
-    "ublox-odin-w2-drivers": "*"
+    "ublox-odin-w2-drivers-binary": "*"
   },
   "targetDependencies": {},
   "testDependencies": {

@@ -18,7 +18,7 @@
 #define __CB_FILE__ "cbIP_WLAN_IF"
 
 #include "cb_ip.h"
-#include "ublox-odin-w2-drivers/cb_wlan.h"
+#include "cb_wlan.h"
 #include "cb_log.h"
 
 #include "lwip/netif.h"
