@@ -1,19 +1,26 @@
-/*---------------------------------------------------------------------------
- * Copyright (c) 2014 connectBlue AB, Sweden.
- * Any reproduction without written permission is prohibited by law.
- *
- * Component: SPA application
- * File     : cb_lwip.c
- *
- * Description: Drives the TCP/IP stack.
- *-------------------------------------------------------------------------*/
+/*
+* PackageLicenseDeclared: Apache-2.0
+* Copyright (c) 2016 u-blox AB, Sweden.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 #define __CB_FILE__ "cbIP_ETH_IF"
 
 #include "cb_ip.h"
 #include "cb_log.h"
 
 #include "lwip/netif.h"
-
 #include "netif/etharp.h"
 #include "lwip/dhcp.h"
 
@@ -75,8 +82,6 @@ static void packetIndication(cb_uint8* pBuf, cb_uint32 len)
         netif_set_link_up(&ethIf.hInterface);
         firstTime = FALSE;
     }
-    //copy data
-    //netif->input();
     struct pbuf* pbuf = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
     if (pbuf != NULL)
     {
@@ -128,7 +133,7 @@ void cbIP_initEthInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const
     memcpy(&ethIf.ifConfig, ifConfig, sizeof(ethIf.ifConfig));
     ethIf.statusCallback = callback;
 
-   netif_add(&ethIf.hInterface, &ipaddr, &netmask, &gw, &ethIf, cb_netif_init, ethernet_input);
+    netif_add(&ethIf.hInterface, &ipaddr, &netmask, &gw, &ethIf, cb_netif_init, ethernet_input);
     ethIf.hInterface.hostname = hostname;
 
     LWIP_PRINT("Using static ip addresses\n");
@@ -197,8 +202,6 @@ static err_t cb_netif_init(struct netif* netif)
 
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
 
-//     cbWLAN_registerStatusCallback(statusIndication, &hIf->hInterface);
-//     cbWLAN_registerPacketIndicationCallback(packetIndication, &hIf->hInterface);
     cbETH_init(netif->hwaddr, packetIndication);
 
     return ERR_OK;
@@ -245,7 +248,7 @@ static void netif_status_callback(struct netif *netif)
     cbIP_IPv4Settings ipV4Settings;
     cbIP_IPv6Settings ipV6Settings;
 
-    ipV4Settings.address.value = netif->ip_addr.addr; // Todo change value to addr?? in cbIP address type
+    ipV4Settings.address.value = netif->ip_addr.addr;
     ipV4Settings.netmask.value = netif->netmask.addr;
     ipV4Settings.gateway.value = netif->gw.addr;
 

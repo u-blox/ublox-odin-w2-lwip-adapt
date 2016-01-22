@@ -1,16 +1,24 @@
-/*---------------------------------------------------------------------------
- * Copyright (c) 2014 connectBlue AB, Sweden.
- * Any reproduction without written permission is prohibited by law.
- *
- * Component: SPA application
- * File     : cb_lwip.c
- *
- * Description: Drives the TCP/IP stack.
- *-------------------------------------------------------------------------*/
+/*
+* PackageLicenseDeclared: Apache-2.0
+* Copyright (c) 2016 u-blox AB, Sweden.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 #define __CB_FILE__ "cbIP_WLAN_IF"
 
 #include "cb_ip.h"
-#include "ublox-odin-w2-drivers/cb_wlan.h"
+#include "cb_wlan.h"
 #include "cb_log.h"
 
 #include "lwip/netif.h"
@@ -85,7 +93,6 @@ void cbIP_initWlanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * cons
     struct ip_addr dns0;
     struct ip_addr dns1;
     struct ip6_addr ip6addr;
-    cbIP_IPv4Address dhcpStartAddress;
 
     cb_ASSERT(callback != NULL && hostname != NULL && IPv4Settings != NULL && ifConfig != NULL);
 
@@ -196,6 +203,7 @@ void cbIP_removeWlanInterface(void)
 
 static void statusIndication(void *callbackContext, cbWLAN_StatusIndicationInfo status, void *data)
 {
+    (void)data;
     struct netif* netif = (struct netif*)callbackContext;
 
     switch (status) {
@@ -298,7 +306,7 @@ static void netif_status_callback(struct netif *netif)
     cbIP_IPv6Settings ipV6Settings;
 
 
-    ipV4Settings.address.value = netif->ip_addr.addr; // Todo change value to addr?? in cbIP address type
+    ipV4Settings.address.value = netif->ip_addr.addr;
     ipV4Settings.netmask.value = netif->netmask.addr;
     ipV4Settings.gateway.value = netif->gw.addr;
     ipV4Settings.dns0.value = dns_getserver(0).addr;

@@ -1,12 +1,20 @@
-/*---------------------------------------------------------------------------
- * Copyright (c) 2014 connectBlue AB, Sweden.
- * Any reproduction without written permission is prohibited by law.
- *
- * Component: SPA application
- * File     : cb_lwip.c
- *
- * Description: Drives the TCP/IP stack.
- *-------------------------------------------------------------------------*/
+/*
+* PackageLicenseDeclared: Apache-2.0
+* Copyright (c) 2016 u-blox AB, Sweden.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 #define __CB_FILE__ "cbIP"
 
 #include "string.h"
@@ -47,10 +55,13 @@ typedef struct {
     cbTIMER_Id lwipTimerId;
 } cbIP;
 
+typedef struct cbIP_Netif* cbIP_Netif;
+
 /*===========================================================================
  * DECLARATIONS
  *=========================================================================*/
 static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2);
+static cbIP_Netif* getNetif(cbIP_IPv4Address addr);
 
 /*===========================================================================
  * DEFINITIONS
@@ -112,7 +123,7 @@ cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbI
 
     cb_ASSERT(ip_addr != NULL);
 
-    status = dns_gethostbyname(str, &address, callback, arg);   // TODO: Unsafe callback as the cbIP_IPv4Address may differ from ip_addr_t.
+    status = dns_gethostbyname(str, &address, (dns_found_callback)callback, arg);   // TODO: Unsafe callback as the cbIP_IPv4Address may differ from ip_addr_t.
 
     if (status == ERR_OK) {
         ip_addr->value = address.addr;
@@ -125,7 +136,16 @@ cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbI
     return FALSE;
 }
 
-cbIP_Netif* cbIP_getNetif(cbIP_IPv4Address addr)
+void cbIP_setDefaultNetif(cbIP_IPv4Address addr)
+{
+    cbIP_Netif* netif = getNetif(addr);
+    if (netif != NULL)
+    {
+        netif_set_default((struct netif*)netif);
+    }
+}
+
+static cbIP_Netif* getNetif(cbIP_IPv4Address addr)
 {
     for (struct netif* netif = netif_list; netif != NULL; netif = netif->next)
     {
@@ -135,15 +155,6 @@ cbIP_Netif* cbIP_getNetif(cbIP_IPv4Address addr)
         }
     }
     return NULL;
-}
-
-void cbIP_setDefaultNetif(cbIP_IPv4Address addr)
-{
-    cbIP_Netif* netif = cbIP_getNetif(addr);
-    if (netif != NULL)
-    {
-        netif_set_default((struct netif*)netif);
-    }
 }
 
 /*===========================================================================
@@ -179,5 +190,9 @@ void sys_arch_unprotect(sys_prot_t pval)
 
 static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2)
 {
+    (void)id;
+    (void)arg1;
+    (void)arg2;
+
     sys_check_timeouts();
 }
