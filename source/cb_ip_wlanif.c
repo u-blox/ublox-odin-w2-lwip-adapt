@@ -93,7 +93,6 @@ void cbIP_initWlanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * cons
     struct ip_addr dns0;
     struct ip_addr dns1;
     struct ip6_addr ip6addr;
-    cbIP_IPv4Address dhcpStartAddress;
 
     cb_ASSERT(callback != NULL && hostname != NULL && IPv4Settings != NULL && ifConfig != NULL);
 
@@ -204,6 +203,7 @@ void cbIP_removeWlanInterface(void)
 
 static void statusIndication(void *callbackContext, cbWLAN_StatusIndicationInfo status, void *data)
 {
+    (void)data;
     struct netif* netif = (struct netif*)callbackContext;
 
     switch (status) {

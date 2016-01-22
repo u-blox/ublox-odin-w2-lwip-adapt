@@ -123,7 +123,7 @@ cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbI
 
     cb_ASSERT(ip_addr != NULL);
 
-    status = dns_gethostbyname(str, &address, callback, arg);   // TODO: Unsafe callback as the cbIP_IPv4Address may differ from ip_addr_t.
+    status = dns_gethostbyname(str, &address, (dns_found_callback)callback, arg);   // TODO: Unsafe callback as the cbIP_IPv4Address may differ from ip_addr_t.
 
     if (status == ERR_OK) {
         ip_addr->value = address.addr;
@@ -190,5 +190,9 @@ void sys_arch_unprotect(sys_prot_t pval)
 
 static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2)
 {
+    (void)id;
+    (void)arg1;
+    (void)arg2;
+
     sys_check_timeouts();
 }

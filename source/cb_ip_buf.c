@@ -121,7 +121,6 @@ cbIP_frame* cbIP_allocDataFrame(cb_uint32 size)
 {
     struct pbuf* pbuf;
 
-//    pbuf = pbuf_alloc(PBUF_IP, (u16_t)size, PBUF_POOL);
     pbuf = pbuf_alloc(PBUF_RAW, (u16_t)size, PBUF_POOL);
 
     return (cbIP_frame*)pbuf;
