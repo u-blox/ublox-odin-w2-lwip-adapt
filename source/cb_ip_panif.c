@@ -50,8 +50,6 @@
 #define IFNAME0 'b'
 #define IFNAME1 'p'
 
-#define IFNAME "bp0"
-
 /*===========================================================================
  * TYPES
  *=========================================================================*/
@@ -61,13 +59,8 @@ typedef struct {
     cbIP_interfaceSettings ifConfig;
     cbIP_statusIndication statusCallback;
     void* callbackArg;
+    cbBCM_Handle connHandle;
 } cbIP_panIf;
-
-typedef enum {
-    cbIP_PAN_LINKUP,
-    cbIP_PAN_LINKDOWN,
-} cbIP_PAN_LinkState;
-
 
 /*===========================================================================
  * DECLARATIONS
@@ -81,8 +74,8 @@ static void netif_status_callback(struct netif *netif);
 
 static void handleConnectEvt(cbBCM_Handle connHandle, cbBCM_ConnectionInfo info);
 static void handleDisconnectEvt(cbBCM_Handle connHandle);
-static void handleDataEvt(cbBTPAN_Handle btPanHandle, cb_uint8* pData, cb_uint16 length);
-static void handleDataCnf(cbBTPAN_Handle btPanHandle, cb_int32 result);
+static void handleDataEvt(cbBCM_Handle connHandle, cb_uint8* pData, cb_uint16 length);
+static void handleDataCnf(cbBCM_Handle connHandle, cb_int32 result);
 
 /*===========================================================================
  * DEFINITIONS
@@ -90,7 +83,7 @@ static void handleDataCnf(cbBTPAN_Handle btPanHandle, cb_int32 result);
 
 cbIP_panIf panIf;
 
-static const cbBTPAN_Callback _panCallBack =
+static cbBTPAN_Callback _panCallBack =
 {
     handleConnectEvt,
     handleDisconnectEvt,
@@ -216,8 +209,6 @@ void cbIP_removePanInterface(void)
 {
     LWIP_PRINT("Interface down\n");
 
-    // TODO deregister PAN callbacks
-
     dhcp_stop(&panIf.hInterface);
     netif_remove(&panIf.hInterface);
     dhcp_cleanup(&panIf.hInterface);
@@ -229,10 +220,13 @@ void cbIP_removePanInterface(void)
 
 static void handleConnectEvt(cbBCM_Handle connHandle, cbBCM_ConnectionInfo info)
 {
+    (void)info;
+
     printf("%s\n",__FUNCTION__);
 
     struct netif* netif = &panIf.hInterface;
     netif_set_link_up(netif);
+    panIf.connHandle = connHandle;
 }
 
 static void handleDisconnectEvt(cbBCM_Handle connHandle)
@@ -241,14 +235,15 @@ static void handleDisconnectEvt(cbBCM_Handle connHandle)
 
     struct netif* netif = &panIf.hInterface;
     netif_set_link_down(netif);
+    panIf.connHandle = cbBCM_INVALID_CONNECTION;
 }
 
-static void handleDataEvt(cbBTPAN_Handle btPanHandle, cb_uint8* pData, cb_uint16 length)
+static void handleDataEvt(cbBCM_Handle connHandle, cb_uint8* pData, cb_uint16 length)
 {
-    printf("%s\n",__FUNCTION__);
-
     struct pbuf* pbuf;
     struct netif* netif = &panIf.hInterface;
+
+    cb_ASSERT(connHandle == panIf.connHandle);
 
     pbuf = (struct pbuf*)cbIP_allocDataFrame(length);
     cb_ASSERT(pbuf != NULL);
@@ -261,9 +256,9 @@ static void handleDataEvt(cbBTPAN_Handle btPanHandle, cb_uint8* pData, cb_uint16
     LINK_STATS_INC(link.recv);
 }
 
-static void handleDataCnf(cbBTPAN_Handle btPanHandle, cb_int32 result)
+static void handleDataCnf(cbBCM_Handle connHandle, cb_int32 result)
 {
-    printf("%s\n",__FUNCTION__);
+    /* Do nothing */
 }
 
 static err_t cb_netif_init(struct netif* netif)
@@ -325,7 +320,7 @@ static err_t low_level_output(struct netif* netif, struct pbuf* p)
         cb_ASSERT(buf != NULL); // Throw away packets if we can not allocate?
         cb_boolean status = cbIP_copyFromDataFrame(buf,p,totSize,0);
         cb_ASSERT(status);
-        cb_int32 result = cbBTPAN_reqData(1,buf,totSize); // TODO don't hardcode hadle
+        cb_int32 result = cbBTPAN_reqData(panIf.connHandle,buf,totSize);
         if(result == cbBTPAN_RESULT_OK)
         {
             retVal = ERR_OK;
@@ -349,7 +344,6 @@ static void netif_status_callback(struct netif *netif)
 {
     cbIP_IPv4Settings ipV4Settings;
     cbIP_IPv6Settings ipV6Settings;
-
 
     ipV4Settings.address.value = netif->ip_addr.addr;
     ipV4Settings.netmask.value = netif->netmask.addr;
