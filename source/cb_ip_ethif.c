@@ -27,6 +27,8 @@
 #include "cb_ethernet.h"
 #include <string.h>
 
+#include "mbed-drivers/mbed_assert.h"
+
 /*===========================================================================
  * DEFINES
  *=========================================================================*/
@@ -52,12 +54,6 @@ typedef struct {
     void* callbackArg;
 } cbIP_ethIf;
 
-typedef enum {
-    cbIP_ETH_LINKUP,
-    cbIP_ETH_LINKDOWN,
-} cbIP_ETH_LinkState;
-
-
 /*===========================================================================
  * DECLARATIONS
  *=========================================================================*/
@@ -77,32 +73,28 @@ cbIP_ethIf ethIf;
 static void packetIndication(cb_uint8* pBuf, cb_uint32 len)
 {
     static cb_boolean firstTime = TRUE;
-    if (firstTime)
-    {
+    if (firstTime) {
         netif_set_link_up(&ethIf.hInterface);
         firstTime = FALSE;
     }
     struct pbuf* pbuf = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
-    if (pbuf != NULL)
-    {
+    if (pbuf != NULL) {
         cb_uint32 bufferIndex = 0;
         struct pbuf* pCurBuf = pbuf;
-        cb_ASSERT(ethIf.hInterface.input != NULL);
-        cb_ASSERT(len == pbuf->tot_len);
+        MBED_ASSERT(ethIf.hInterface.input != NULL);
+        MBED_ASSERT(len == pbuf->tot_len);
 
-        while (bufferIndex < len && pCurBuf != NULL)
-        {
-            cb_ASSERT(pCurBuf->payload != NULL);
-            cb_ASSERT(pCurBuf->len <= (len - bufferIndex));
+        while (bufferIndex < len && pCurBuf != NULL) {
+            MBED_ASSERT(pCurBuf->payload != NULL);
+            MBED_ASSERT(pCurBuf->len <= (len - bufferIndex));
             memcpy(pCurBuf->payload, pBuf + bufferIndex, pCurBuf->len);
             bufferIndex += pCurBuf->len;
             pCurBuf = pCurBuf->next;
         }
-        cb_ASSERT(pCurBuf == NULL);
-        cb_ASSERT(bufferIndex == len);
+        MBED_ASSERT(pCurBuf == NULL);
+        MBED_ASSERT(bufferIndex == len);
 
-        if (ethIf.hInterface.input(pbuf, &ethIf.hInterface) != ERR_OK)
-        {
+        if (ethIf.hInterface.input(pbuf, &ethIf.hInterface) != ERR_OK) {
             pbuf_free(pbuf);
         }
     }
@@ -115,16 +107,13 @@ void cbIP_initEthInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const
     struct ip_addr netmask;
     struct ip_addr gw;
 
-    cb_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
+    MBED_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
 
-    if (IPv4Settings == NULL)
-    {
+    if (IPv4Settings == NULL) {
         gw.addr = 0;
         ipaddr.addr = 0;
         netmask.addr = 0;
-    }
-    else
-    {
+    } else {
         gw.addr = IPv4Settings->gateway.value;
         ipaddr.addr = IPv4Settings->address.value;
         netmask.addr = IPv4Settings->netmask.value;
@@ -158,7 +147,7 @@ void cbIP_initEthInterfaceDHCP(char* hostname, cbIP_interfaceSettings const * co
     struct ip_addr netmask;
     struct ip_addr gw;
 
-    cb_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
+    MBED_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
 
     IP4_ADDR(&gw, 0, 0, 0, 0);
     IP4_ADDR(&ipaddr, 0, 0, 0, 0);
@@ -221,22 +210,19 @@ static err_t low_level_output(struct netif* cb_UNUSED(netif), struct pbuf* p)
 {
     err_t res = ERR_USE;
     cb_uint8* pBuf = cbETH_getTransmitBuffer();
-    if (pBuf != NULL)
-    {
+    if (pBuf != NULL) {
         cb_uint32 bufferIndex = 0;
         struct pbuf* pCurBuf = p;
         cb_boolean ethRes;
-        while (pCurBuf != NULL)
-        {
+        while (pCurBuf != NULL) {
             memcpy(pBuf + bufferIndex, pCurBuf->payload, pCurBuf->len);
             bufferIndex += pCurBuf->len;
             pCurBuf = pCurBuf->next;
         }
-        cb_ASSERT(pCurBuf == NULL);
-        cb_ASSERT(bufferIndex == p->tot_len);
+        MBED_ASSERT(pCurBuf == NULL);
+        MBED_ASSERT(bufferIndex == p->tot_len);
         ethRes = cbETH_transmit(bufferIndex);
-        if (ethRes)
-        {
+        if (ethRes) {
             res = ERR_OK;
         }
     }
@@ -254,10 +240,9 @@ static void netif_status_callback(struct netif *netif)
 
     memcpy(&ipV6Settings.linklocal.value, netif->ip6_addr[0].addr, sizeof (cbIP_IPv6Address));
 
-    if (netif->flags & NETIF_FLAG_UP){
+    if (netif->flags & NETIF_FLAG_UP) {
         ethIf.statusCallback(cbIP_NETWORK_UP, ethIf.callbackArg, &ipV4Settings, &ipV6Settings);
-    }
-    else{
+    } else {
         ethIf.statusCallback(cbIP_NETWORK_DOWN,ethIf.callbackArg, &ipV4Settings, &ipV6Settings);
     }
 }

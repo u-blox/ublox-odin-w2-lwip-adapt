@@ -31,6 +31,8 @@
 
 #include <string.h>
 
+#include "mbed-drivers/mbed_assert.h"
+
 /*===========================================================================
  * DEFINES
  *=========================================================================*/
@@ -57,12 +59,6 @@ typedef struct {
     void* callbackArg;
 } cbIP_wlanIf;
 
-typedef enum {
-    cbIP_WLAN_LINKUP,
-    cbIP_WLAN_LINKDOWN,
-} cbIP_WLAN_LinkState;
-
-
 /*===========================================================================
  * DECLARATIONS
  *=========================================================================*/
@@ -85,7 +81,13 @@ cbIP_wlanIf wlanIf;
  * FUNCTIONS
  *=========================================================================*/
 
-void cbIP_initWlanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const IPv4Settings, const cbIP_IPv6Settings * const IPv6Settings, cbIP_interfaceSettings const * const ifConfig, cbIP_statusIndication callback, void* callbackArg)
+void cbIP_initWlanInterfaceStatic(
+    char* hostname, 
+    const cbIP_IPv4Settings * const IPv4Settings, 
+    const cbIP_IPv6Settings * const IPv6Settings, 
+    cbIP_interfaceSettings const * const ifConfig, 
+    cbIP_statusIndication callback, 
+    void* callbackArg)
 {
     struct ip_addr ipaddr;
     struct ip_addr netmask;
@@ -94,7 +96,7 @@ void cbIP_initWlanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * cons
     struct ip_addr dns1;
     struct ip6_addr ip6addr;
 
-    cb_ASSERT(callback != NULL && hostname != NULL && IPv4Settings != NULL && ifConfig != NULL);
+    MBED_ASSERT(callback != NULL && hostname != NULL && IPv4Settings != NULL && ifConfig != NULL);
 
     gw.addr = IPv4Settings->gateway.value;
     ipaddr.addr = IPv4Settings->address.value;
@@ -112,12 +114,9 @@ void cbIP_initWlanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * cons
 
     wlanIf.hInterface.ip6_autoconfig_enabled = 0;
     if ((ip6addr.addr[0] == 0) && (ip6addr.addr[1] == 0) &&
-        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0))
-    {
+        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0)) {
         netif_create_ip6_linklocal_address(&wlanIf.hInterface, 1);
-    }
-    else
-    {
+    } else {
         memcpy(&wlanIf.hInterface.ip6_addr[0], &ip6addr, sizeof(ip6addr));
     }
     netif_ip6_addr_set_state((&wlanIf.hInterface), 0, IP6_ADDR_TENTATIVE);
@@ -148,14 +147,19 @@ void cbIP_initWlanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * cons
     netif_set_up(&wlanIf.hInterface);
 }
 
-void cbIP_initWlanInterfaceDHCP(char* hostname, const cbIP_IPv6Settings * const IPv6Settings, cbIP_interfaceSettings const * const ifConfig, cbIP_statusIndication callback, void* callbackArg)
+void cbIP_initWlanInterfaceDHCP(
+    char* hostname, 
+    const cbIP_IPv6Settings * const IPv6Settings, 
+    cbIP_interfaceSettings const * const ifConfig, 
+    cbIP_statusIndication callback, 
+    void* callbackArg)
 {
     struct ip_addr ipaddr;
     struct ip_addr netmask;
     struct ip_addr gw;
     struct ip6_addr ip6addr;
 
-    cb_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
+    MBED_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
 
     IP4_ADDR(&gw, 0, 0, 0, 0);
     IP4_ADDR(&ipaddr, 0, 0, 0, 0);
@@ -170,12 +174,9 @@ void cbIP_initWlanInterfaceDHCP(char* hostname, const cbIP_IPv6Settings * const 
     wlanIf.callbackArg = callbackArg;
     wlanIf.hInterface.ip6_autoconfig_enabled = 0;
     if ((ip6addr.addr[0] == 0) && (ip6addr.addr[1] == 0) &&
-        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0))
-    {
+        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0)) {
         netif_create_ip6_linklocal_address(&wlanIf.hInterface, 1);
-    }
-    else
-    {
+    } else {
         wlanIf.hInterface.ip6_addr[0] = ip6addr;
     }
     netif_ip6_addr_set_state((&wlanIf.hInterface), 0, IP6_ADDR_TENTATIVE);
@@ -228,8 +229,8 @@ static void packetIndication(void *callbackContext, cbWLAN_PacketIndicationInfo 
     struct netif* netif = (struct netif*)callbackContext;
     struct pbuf* pbuf = (struct pbuf*)packetInfo->rxData;
 
-    cb_ASSERT(netif != NULL);
-    cb_ASSERT(pbuf != NULL);
+    MBED_ASSERT(netif != NULL);
+    MBED_ASSERT(pbuf != NULL);
 
     wlanIf.statusCallback(cbIP_NETWORK_ACTIVITY, NULL, NULL, wlanIf.callbackArg);
     netif->input(pbuf, netif);
@@ -304,7 +305,6 @@ static void netif_status_callback(struct netif *netif)
 {
     cbIP_IPv4Settings ipV4Settings;
     cbIP_IPv6Settings ipV6Settings;
-
 
     ipV4Settings.address.value = netif->ip_addr.addr;
     ipV4Settings.netmask.value = netif->netmask.addr;

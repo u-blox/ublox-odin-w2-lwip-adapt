@@ -35,6 +35,7 @@
 #include "lwip/dns.h"
 
 #include "ualloc/ualloc.h"
+#include "mbed-drivers/mbed_assert.h"
 
 
 /*===========================================================================
@@ -95,7 +96,14 @@ static cbBTPAN_Callback _panCallBack =
  * FUNCTIONS
  *=========================================================================*/
 
-void cbIP_initPanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const IPv4Settings, const cbIP_IPv6Settings * const IPv6Settings, cbIP_interfaceSettings const * const ifConfig, cbIP_statusIndication callback, void* callbackArg)
+void cbIP_initPanInterfaceStatic(
+	
+    char* hostname, 
+    const cbIP_IPv4Settings * const IPv4Settings, 
+    const cbIP_IPv6Settings * const IPv6Settings, 
+    cbIP_interfaceSettings const * const ifConfig, 
+    cbIP_statusIndication callback, 
+    void* callbackArg)
 {
     struct ip_addr ipaddr;
     struct ip_addr netmask;
@@ -104,7 +112,7 @@ void cbIP_initPanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const
     struct ip_addr dns1;
     struct ip6_addr ip6addr;
 
-    cb_ASSERT(callback != NULL && hostname != NULL && IPv4Settings != NULL && ifConfig != NULL);
+	MBED_ASSERT(callback != NULL && hostname != NULL && IPv4Settings != NULL && ifConfig != NULL);
 
     gw.addr = IPv4Settings->gateway.value;
     ipaddr.addr = IPv4Settings->address.value;
@@ -122,12 +130,9 @@ void cbIP_initPanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const
 
     panIf.hInterface.ip6_autoconfig_enabled = 0;
     if ((ip6addr.addr[0] == 0) && (ip6addr.addr[1] == 0) &&
-        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0))
-    {
+        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0)) {
         netif_create_ip6_linklocal_address(&panIf.hInterface, 1);
-    }
-    else
-    {
+    } else {
         memcpy(&panIf.hInterface.ip6_addr[0], &ip6addr, sizeof(ip6addr));
     }
     netif_ip6_addr_set_state((&panIf.hInterface), 0, IP6_ADDR_TENTATIVE);
@@ -159,17 +164,22 @@ void cbIP_initPanInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const
 
     cb_uint32 result;
     result = cbBTPAN_registerDataCallback(&_panCallBack);
-    cb_ASSERT(result == cbBTPAN_RESULT_OK);
+    MBED_ASSERT(result == cbBTPAN_RESULT_OK);
 }
 
-void cbIP_initPanInterfaceDHCP(char* hostname, const cbIP_IPv6Settings * const IPv6Settings, cbIP_interfaceSettings const * const ifConfig, cbIP_statusIndication callback, void* callbackArg)
+void cbIP_initPanInterfaceDHCP(
+    char* hostname, 
+    const cbIP_IPv6Settings * const IPv6Settings, 
+    cbIP_interfaceSettings const * const ifConfig, 
+    cbIP_statusIndication callback, 
+    void* callbackArg)
 {
     struct ip_addr ipaddr;
     struct ip_addr netmask;
     struct ip_addr gw;
     struct ip6_addr ip6addr;
 
-    cb_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
+    MBED_ASSERT(callback != NULL && hostname != NULL && ifConfig != NULL);
 
     IP4_ADDR(&gw, 0, 0, 0, 0);
     IP4_ADDR(&ipaddr, 0, 0, 0, 0);
@@ -184,12 +194,9 @@ void cbIP_initPanInterfaceDHCP(char* hostname, const cbIP_IPv6Settings * const I
     panIf.callbackArg = callbackArg;
     panIf.hInterface.ip6_autoconfig_enabled = 0;
     if ((ip6addr.addr[0] == 0) && (ip6addr.addr[1] == 0) &&
-        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0))
-    {
+        (ip6addr.addr[2] == 0) && (ip6addr.addr[3] == 0)) {
         netif_create_ip6_linklocal_address(&panIf.hInterface, 1);
-    }
-    else
-    {
+    } else {
         panIf.hInterface.ip6_addr[0] = ip6addr;
     }
     netif_ip6_addr_set_state((&panIf.hInterface), 0, IP6_ADDR_TENTATIVE);
@@ -202,7 +209,7 @@ void cbIP_initPanInterfaceDHCP(char* hostname, const cbIP_IPv6Settings * const I
 
     cb_uint32 result;
     result = cbBTPAN_registerDataCallback(&_panCallBack);
-    cb_ASSERT(result == cbBTPAN_RESULT_OK);
+    MBED_ASSERT(result == cbBTPAN_RESULT_OK);
 }
 
 void cbIP_removePanInterface(void)
@@ -232,6 +239,8 @@ static void handleConnectEvt(cbBCM_Handle connHandle, cbBCM_ConnectionInfo info)
 static void handleDisconnectEvt(cbBCM_Handle connHandle)
 {
     printf("%s\n",__FUNCTION__);
+    
+    MBED_ASSERT(panIf.connHandle == connHandle);
 
     struct netif* netif = &panIf.hInterface;
     netif_set_link_down(netif);
@@ -240,15 +249,14 @@ static void handleDisconnectEvt(cbBCM_Handle connHandle)
 
 static void handleDataEvt(cbBCM_Handle connHandle, cb_uint8* pData, cb_uint16 length)
 {
+    (void)connHandle;
     struct pbuf* pbuf;
     struct netif* netif = &panIf.hInterface;
 
-    cb_ASSERT(connHandle == panIf.connHandle);
-
     pbuf = (struct pbuf*)cbIP_allocDataFrame(length);
-    cb_ASSERT(pbuf != NULL);
+    MBED_ASSERT(pbuf != NULL);
     cb_boolean status = cbIP_copyToDataFrame((cbIP_frame*)pbuf,pData,length,0);
-    cb_ASSERT(status);
+    MBED_ASSERT(status);
 
     panIf.statusCallback(cbIP_NETWORK_ACTIVITY, NULL, NULL, panIf.callbackArg);
     netif->input(pbuf, netif);
@@ -258,6 +266,9 @@ static void handleDataEvt(cbBCM_Handle connHandle, cb_uint8* pData, cb_uint16 le
 
 static void handleDataCnf(cbBCM_Handle connHandle, cb_int32 result)
 {
+    (void)connHandle;
+    (void)result;
+
     /* Do nothing */
 }
 
@@ -312,22 +323,19 @@ static err_t low_level_output(struct netif* netif, struct pbuf* p)
         pbuf_ref(p);
         panIf.statusCallback(cbIP_NETWORK_ACTIVITY, NULL, NULL, panIf.callbackArg);
 
-        cb_uint32 totSize = cbIP_getDataFrameSize(p);
+        cb_uint32 totSize = cbIP_getDataFrameSize((cbIP_frame*)p);
         UAllocTraits_t t;
         t.flags = 0;
         t.extended = 0;
         cb_uint8* buf = mbed_ualloc(totSize,t);
-        cb_ASSERT(buf != NULL); // Throw away packets if we can not allocate?
-        cb_boolean status = cbIP_copyFromDataFrame(buf,p,totSize,0);
-        cb_ASSERT(status);
+        MBED_ASSERT(buf != NULL); // Throw away packets if we can not allocate?
+        cb_boolean status = cbIP_copyFromDataFrame(buf, (cbIP_frame*)p, totSize, 0);
+        MBED_ASSERT(status);
         cb_int32 result = cbBTPAN_reqData(panIf.connHandle,buf,totSize);
-        if(result == cbBTPAN_RESULT_OK)
-        {
+        if(result == cbBTPAN_RESULT_OK) {
             retVal = ERR_OK;
             LINK_STATS_INC(link.xmit);
-        }
-        else
-        {
+        } else {
             printf("low_level_output - packet dropped\n");
         }
         mbed_ufree(buf);
