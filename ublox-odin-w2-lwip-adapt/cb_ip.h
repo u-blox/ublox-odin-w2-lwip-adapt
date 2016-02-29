@@ -135,6 +135,21 @@ void cbIP_initEthInterfaceDHCP(
     cbIP_interfaceSettings const * const ifConfig, 
     cbIP_statusIndication callback);
 
+void cbIP_initPanInterfaceStatic(
+    char* hostname,
+    const cbIP_IPv4Settings * const IPv4Settings,
+    const cbIP_IPv6Settings * const IPv6Settings,
+    cbIP_interfaceSettings const * const ifConfig,
+    cbIP_statusIndication callback,
+    void* callbackArg);
+
+void cbIP_initPanInterfaceDHCP(
+    char* hostname,
+    const cbIP_IPv6Settings * const IPv6Settings,
+    cbIP_interfaceSettings const * const ifConfig,
+    cbIP_statusIndication callback,
+    void* callbackArg);
+
 void cbIP_removeWlanInterface(void);
 
 cb_boolean cbIP_UTIL_aton(const cb_char *str, cbIP_IPv4Address *addr);

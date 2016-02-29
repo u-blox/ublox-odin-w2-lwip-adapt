@@ -36,6 +36,9 @@
 #include "lwip/netif.h"
 
 #include "cb_os.h"
+
+#include "mbed-drivers/mbed_assert.h"
+
 /*===========================================================================
  * DEFINES
  *=========================================================================*/
@@ -76,7 +79,6 @@ void cbIP_init(void)
 {
     /* Startup lwIP */
     lwip_init();
-
     hIP.lwipTimerId = cbTIMER_every(LWIP_TMR_INTERVAL, lwipTimerCallback, 0, 0);
 }
 
@@ -121,7 +123,7 @@ cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbI
     err_t status;
     ip_addr_t address;
 
-    cb_ASSERT(ip_addr != NULL);
+    MBED_ASSERT(ip_addr != NULL);
 
     status = dns_gethostbyname(str, &address, (dns_found_callback)callback, arg);   // TODO: Unsafe callback as the cbIP_IPv4Address may differ from ip_addr_t.
 
@@ -139,18 +141,15 @@ cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbI
 void cbIP_setDefaultNetif(cbIP_IPv4Address addr)
 {
     cbIP_Netif* netif = getNetif(addr);
-    if (netif != NULL)
-    {
+    if (netif != NULL) {
         netif_set_default((struct netif*)netif);
     }
 }
 
 static cbIP_Netif* getNetif(cbIP_IPv4Address addr)
 {
-    for (struct netif* netif = netif_list; netif != NULL; netif = netif->next)
-    {
-        if (addr.value == netif->ip_addr.addr)
-        {
+    for (struct netif* netif = netif_list; netif != NULL; netif = netif->next) {
+        if (addr.value == netif->ip_addr.addr) {
             return (cbIP_Netif*)netif;
         }
     }

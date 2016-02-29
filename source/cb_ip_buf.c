@@ -23,6 +23,8 @@
 #include "string.h"
 #include "lwip/stats.h"
 
+#include "mbed-drivers/mbed_assert.h"
+
 /*===========================================================================
  * DEFINES
  *=========================================================================*/
@@ -50,8 +52,8 @@ cb_boolean cbIP_copyFromDataFrame(cb_uint8* buffer, cbIP_frame* frame, cb_uint32
     cb_uint32 copySize;
     cb_uint32 bytesCopied = 0;
 
-    cb_ASSERT(frame != NULL);
-    cb_ASSERT(buffer != NULL);
+    MBED_ASSERT(frame != NULL);
+    MBED_ASSERT(buffer != NULL);
 
     while (pbuf != NULL) {
         if ((pbufOffset + pbuf->len) >= offsetInFrame) {
@@ -74,7 +76,7 @@ cb_boolean cbIP_copyFromDataFrame(cb_uint8* buffer, cbIP_frame* frame, cb_uint32
         pbuf = pbuf->next;
     }
 
-    cb_ASSERT(bytesCopied <= size);
+    MBED_ASSERT(bytesCopied <= size);
 
     return (bytesCopied == size);
 }
@@ -87,8 +89,8 @@ cb_boolean cbIP_copyToDataFrame(cbIP_frame* frame, cb_uint8* buffer, cb_uint32 s
     cb_uint32 copySize;
     cb_uint32 bytesCopied = 0;
 
-    cb_ASSERT(frame != NULL);
-    cb_ASSERT(buffer != NULL);
+    MBED_ASSERT(frame != NULL);
+    MBED_ASSERT(buffer != NULL);
 
     while (pbuf != NULL) {
         if ((pbufOffset + pbuf->len) >= offsetInFrame) {
@@ -111,7 +113,7 @@ cb_boolean cbIP_copyToDataFrame(cbIP_frame* frame, cb_uint8* buffer, cb_uint32 s
         pbuf = pbuf->next;
     }
 
-    cb_ASSERT(bytesCopied <= size);
+    MBED_ASSERT(bytesCopied <= size);
 
     return (bytesCopied == size);
 }
@@ -137,14 +139,14 @@ cb_uint32 cbIP_getDataFrameSize(cbIP_frame* frame)
 {
     struct pbuf* pbuf = (struct pbuf*)frame;
 
-    cb_ASSERT(frame != NULL);
+    MBED_ASSERT(frame != NULL);
 
     return pbuf->tot_len;
 }
 
 void cbIP_getBufStats(cbIP_Stats* ipStats)
 {
-    cb_ASSERT(ipStats != NULL);
+    MBED_ASSERT(ipStats != NULL);
 
     memset(ipStats, 0, sizeof(cbIP_Stats));
 
