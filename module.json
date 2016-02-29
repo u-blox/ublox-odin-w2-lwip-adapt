@@ -1,6 +1,6 @@
 {
   "name": "ublox-odin-w2-lwip-adapt",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "u-blox ODIN-W2 adaptation layer for LWIP and WiF/BT/ethernet",
   "private": true,
   "keywords": [
