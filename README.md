@@ -1,2 +1,2 @@
 # ublox-odin-w2-lwip-adapt
-u-blox adaptation layer between LWIP and WiFi/Bluetooth/ethernet drivers
+This module contains an adaptation layer between the [lwIP stack](http://savannah.nongnu.org/projects/lwip/) and u-blox ODIN-W2 Wi-Fi/Ethernet/Bluetooth PAN network interfaces. lwipopts_conf.h is located here. If other lwIP settings or layer 2 switching is needed this module can be forked or completely replaced.
