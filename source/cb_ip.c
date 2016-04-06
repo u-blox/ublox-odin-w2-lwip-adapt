@@ -21,10 +21,13 @@
 
 #include "cb_comdefs.h"
 #include "cb_ip.h"
-#include "cb_os.h"
 
 #include "cb_timer.h"
 #include "cb_hw.h"
+#include "cb_wlan_target_data.h"
+#include "cb_types.h"
+#include "cb_wlan_types.h"
+#include "cb_ip_buf.h"
 
 #include "lwip/def.h"
 #include "arch/sys_arch.h"
@@ -35,8 +38,7 @@
 #include "lwip/dns.h"
 #include "lwip/netif.h"
 
-#include "cb_os.h"
-
+#include "core-util/critical.h"
 #include "mbed-drivers/mbed_assert.h"
 
 /*===========================================================================
@@ -65,6 +67,23 @@ typedef struct cbIP_Netif* cbIP_Netif;
  *=========================================================================*/
 static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2);
 static cbIP_Netif* getNetif(cbIP_IPv4Address addr);
+static cb_boolean handleWlanTargetCopyFromDataFrame(cb_uint8* buffer, cbWLANTARGET_dataFrame* frame, cb_uint32 size, cb_uint32 offsetInFrame);
+static cb_boolean handleWlanTargetCopyToDataFrame(cbWLANTARGET_dataFrame* frame, cb_uint8* buffer, cb_uint32 size, cb_uint32 offsetInFrame);
+static cbWLANTARGET_dataFrame* handleWlanTargetAllocDataFrame(cb_uint32 size);
+static void handleWlanTargetFreeDataFrame(cbWLANTARGET_dataFrame* frame);
+static cb_uint32 handleWlanTargetGetDataFrameSize(cbWLANTARGET_dataFrame* frame);
+static cb_uint8 handleWlanTargetGetDataFrameTID(cbWLANTARGET_dataFrame* frame);
+
+static const cbWLANTARGET_Callback _wlanTargetCallback = 
+{
+    handleWlanTargetCopyFromDataFrame,
+    handleWlanTargetCopyToDataFrame,
+    handleWlanTargetAllocDataFrame,
+    handleWlanTargetFreeDataFrame,
+    handleWlanTargetGetDataFrameSize,
+    handleWlanTargetGetDataFrameTID
+};
+
 
 /*===========================================================================
  * DEFINITIONS
@@ -80,6 +99,8 @@ void cbIP_init(void)
     /* Startup lwIP */
     lwip_init();
     hIP.lwipTimerId = cbTIMER_every(LWIP_TMR_INTERVAL, lwipTimerCallback, 0, 0);
+    
+    cbWLANTARGET_registerCallbacks((cbWLANTARGET_Callback*)&_wlanTargetCallback);
 }
 
 cb_boolean cbIP_UTIL_aton(const cb_char *str, cbIP_IPv4Address *addr)
@@ -175,12 +196,14 @@ u32_t sys_now()
 
 sys_prot_t sys_arch_protect(void)
 {
-    return cbOS_enterCritical();
+    core_util_critical_section_enter();
+    return 0;
 }
 
 void sys_arch_unprotect(sys_prot_t pval)
 {
-    cbOS_exitCritical((cb_uint32)pval);
+    (void) pval;
+    core_util_critical_section_exit();
 }
 
 /*===========================================================================
@@ -194,4 +217,35 @@ static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2)
     (void)arg2;
 
     sys_check_timeouts();
+}
+
+cb_boolean handleWlanTargetCopyFromDataFrame(cb_uint8* buffer, cbWLANTARGET_dataFrame* frame, cb_uint32 size, cb_uint32 offsetInFrame)
+{
+    return cbIP_copyFromDataFrame(buffer, (cbIP_frame*)frame, size, offsetInFrame);
+}
+
+cb_boolean handleWlanTargetCopyToDataFrame(cbWLANTARGET_dataFrame* frame, cb_uint8* buffer, cb_uint32 size, cb_uint32 offsetInFrame)
+{
+    return cbIP_copyToDataFrame((cbIP_frame*)frame, buffer, size, offsetInFrame);
+}
+
+cbWLANTARGET_dataFrame* handleWlanTargetAllocDataFrame(cb_uint32 size)
+{
+    return (cbWLANTARGET_dataFrame*)cbIP_allocDataFrame(size);
+}
+
+void handleWlanTargetFreeDataFrame(cbWLANTARGET_dataFrame* frame)
+{
+    cbIP_freeDataFrame((cbIP_frame*)frame);
+}
+
+cb_uint32 handleWlanTargetGetDataFrameSize(cbWLANTARGET_dataFrame* frame)
+{
+    return cbIP_getDataFrameSize((cbIP_frame*)frame);
+}
+
+cb_uint8 handleWlanTargetGetDataFrameTID(cbWLANTARGET_dataFrame* frame)
+{
+    (void)frame;
+    return cbWLAN_AC_BE;
 }
