@@ -18,7 +18,6 @@
 #define __CB_FILE__ "cbIP_ETH_IF"
 
 #include "cb_ip.h"
-#include "cb_log.h"
 
 #include "lwip/netif.h"
 #include "netif/etharp.h"
@@ -34,7 +33,7 @@
  *=========================================================================*/
 
 #ifndef NDEBUG
-#define LWIP_PRINT(...)                cbLOG_PRINT(__VA_ARGS__)
+#define LWIP_PRINT(...)                printf(__VA_ARGS__)
 #else
 #define LWIP_PRINT(...)
 #endif
