@@ -76,10 +76,16 @@ typedef struct
     cbIP_Version ipVersion;
 } cbIP_IPAddress;
 
+typedef enum {
+    cbIP_DHCP_SERVER_DISABLE,
+    cbIP_DHCP_SERVER_ENABLE,
+} cbIP_DHCP_Server;
+
 typedef struct cbIP_interfaceSettings
 {
     cb_uint16 MTU;
     cbIP_MACAddress macAddress;
+    cbIP_DHCP_Server dhcpServerState;
 } cbIP_interfaceSettings;
 
 typedef enum {

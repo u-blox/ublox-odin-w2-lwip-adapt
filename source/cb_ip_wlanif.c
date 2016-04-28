@@ -20,6 +20,8 @@
 #include "cb_ip.h"
 #include "cb_wlan.h"
 
+#include "cb_dhcps.h"
+
 #include "lwip/netif.h"
 
 #include "netif/etharp.h"
@@ -94,6 +96,7 @@ void cbIP_initWlanInterfaceStatic(
     struct ip_addr dns0;
     struct ip_addr dns1;
     struct ip6_addr ip6addr;
+    cbIP_IPv4Address dhcpStartAddress;
 
     MBED_ASSERT(callback != NULL && hostname != NULL && IPv4Settings != NULL && ifConfig != NULL);
 
@@ -144,6 +147,13 @@ void cbIP_initWlanInterfaceStatic(
     wlanIf.hInterface.state = &wlanIf;
     netif_set_status_callback(&wlanIf.hInterface, netif_status_callback);
     netif_set_up(&wlanIf.hInterface);
+
+    if (ifConfig->dhcpServerState == cbIP_DHCP_SERVER_ENABLE) {
+        dhcpStartAddress = IPv4Settings->address;
+        dhcpStartAddress.value = (dhcpStartAddress.value & IPv4Settings->netmask.value);
+        dhcpStartAddress.value += htonl(100);
+        cbDHCPS_init(IFNAME, dhcpStartAddress);
+    }
 }
 
 void cbIP_initWlanInterfaceDHCP(
