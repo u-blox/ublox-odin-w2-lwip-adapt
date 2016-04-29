@@ -34,7 +34,7 @@
 
 /* Debug */
 #ifndef NDEBUG
-#define DEBUG_PRINT(...)                          printf(__LINE__, __CB_FILE__, __VA_ARGS__)
+#define DEBUG_PRINT(...)                    printf(__VA_ARGS__)
 #else
 #define DEBUG_PRINT(x, ...)
 #endif
