@@ -190,7 +190,7 @@ static err_t cb_netif_init(struct netif* netif)
 
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
 
-    cbETH_init(netif->hwaddr, packetIndication);
+    cbETH_registerPacketIndicationCallback(packetIndication);
 
     return ERR_OK;
 }
