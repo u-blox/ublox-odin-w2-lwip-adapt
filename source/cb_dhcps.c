@@ -178,7 +178,7 @@ void cbDHCPS_init(cb_char* ifname, cbIP_IPv4Address startAddress)
     /* Is the defined netmask big enough for the entire list of possible clients? */
     if (~netmask - 1 < DHCP_MAX_CLIENTS) {
         dhcps.nClients = ~netmask - 1;
-        DEBUG_DHCPS("nm < %d(nClients)\n", dhcps.nClients);
+        DEBUG_DHCPS("nm < %lu(nClients)\n", dhcps.nClients);
     } else {
         dhcps.nClients = DHCP_MAX_CLIENTS;
     }
@@ -242,7 +242,7 @@ static cb_char* ci2string(cb_uint8* ci, cb_uint32 length)
 
     memset(s, 0, sizeof(s));
     for (i = 0; i < length && i < DHCP_CLIENT_IDENTIFIER_LENGTH; i++) {
-        cbSTR_snprintf(&s[i * 2], 2, "%02x", ci[i]);
+        snprintf(&s[i * 2], 2, "%02x", ci[i]);
     }
 
     return s;
@@ -308,7 +308,7 @@ static cb_uint32 reserveAddress(cb_uint8* pShortCI, cb_int32 length, cb_uint32 l
         dhcps.clients[i].leaseTimeLeft = leaseTime;
         memset(dhcps.clients[i].clientIdentifier, 0, DHCP_CLIENT_IDENTIFIER_LENGTH);
         memcpy(dhcps.clients[i].clientIdentifier, pShortCI, length);
-        DEBUG_DHCPS("resv node %d. ip %s, hw = %s, lease = %d\n",
+        DEBUG_DHCPS("resv node %lu ip %s, hw = %s, lease = %lu\n",
                     i, ip2string(dhcps.clients[i].ipAddr), ci2string(pShortCI, length), dhcps.clients[i].leaseTimeLeft);
         return dhcps.clients[i].ipAddr;
     }
@@ -331,7 +331,7 @@ static void releaseAddress(cb_uint8* pShortCI, cb_int32 length)
     for (i = 0; i < dhcps.nClients; i++) {
         if (memcmp(dhcps.clients[i].clientIdentifier, fullCI, DHCP_CLIENT_IDENTIFIER_LENGTH) == 0) {
             dhcps.clients[i].leaseTimeLeft = 0;
-            DEBUG_DHCPS("rls node %d. ip %s. hw = %s\n",
+            DEBUG_DHCPS("rls node %lu. ip %s. hw = %s\n",
                         i, ip2string(dhcps.clients[i].ipAddr), ci2string(fullCI, DHCP_CLIENT_IDENTIFIER_LENGTH));
         }
     }
