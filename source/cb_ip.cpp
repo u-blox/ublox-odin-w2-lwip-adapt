@@ -22,7 +22,6 @@
 #include "cb_comdefs.h"
 #include "cb_ip.h"
 
-#include "cb_timer.h"
 #include "cb_hw.h"
 #include "cb_wlan_target_data.h"
 #include "cb_types.h"
@@ -40,6 +39,7 @@
 
 #include "core-util/critical.h"
 #include "mbed-drivers/mbed_assert.h"
+#include "minar/minar.h"
 
 /*===========================================================================
  * DEFINES
@@ -56,17 +56,12 @@
 /*===========================================================================
  * TYPES
  *=========================================================================*/
-typedef struct {
-    cbTIMER_Id lwipTimerId;
-} cbIP;
-
-typedef struct cbIP_Netif* cbIP_Netif;
 
 /*===========================================================================
  * DECLARATIONS
  *=========================================================================*/
-static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2);
-static cbIP_Netif* getNetif(cbIP_IPv4Address addr);
+static void lwipTimerCallback(void);
+static struct netif* getNetif(cbIP_IPv4Address addr);
 static cb_boolean handleWlanTargetCopyFromDataFrame(cb_uint8* buffer, cbWLANTARGET_dataFrame* frame, cb_uint32 size, cb_uint32 offsetInFrame);
 static cb_boolean handleWlanTargetCopyToDataFrame(cbWLANTARGET_dataFrame* frame, cb_uint8* buffer, cb_uint32 size, cb_uint32 offsetInFrame);
 static cbWLANTARGET_dataFrame* handleWlanTargetAllocDataFrame(cb_uint32 size);
@@ -88,7 +83,6 @@ static const cbWLANTARGET_Callback _wlanTargetCallback =
 /*===========================================================================
  * DEFINITIONS
  *=========================================================================*/
-static cbIP hIP;
 
 /*===========================================================================
  * FUNCTIONS
@@ -98,8 +92,8 @@ void cbIP_init(void)
 {
     /* Startup lwIP */
     lwip_init();
-    hIP.lwipTimerId = cbTIMER_every(LWIP_TMR_INTERVAL, lwipTimerCallback, 0, 0);
-    
+
+    minar::Scheduler::postCallback(lwipTimerCallback).period(minar::milliseconds(LWIP_TMR_INTERVAL));
     cbWLANTARGET_registerCallbacks((cbWLANTARGET_Callback*)&_wlanTargetCallback);
 }
 
@@ -161,17 +155,17 @@ cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbI
 
 void cbIP_setDefaultNetif(cbIP_IPv4Address addr)
 {
-    cbIP_Netif* netif = getNetif(addr);
+    struct netif* netif = getNetif(addr);
     if (netif != NULL) {
-        netif_set_default((struct netif*)netif);
+        netif_set_default(netif);
     }
 }
 
-static cbIP_Netif* getNetif(cbIP_IPv4Address addr)
+static struct netif* getNetif(cbIP_IPv4Address addr)
 {
     for (struct netif* netif = netif_list; netif != NULL; netif = netif->next) {
         if (addr.value == netif->ip_addr.addr) {
-            return (cbIP_Netif*)netif;
+            return netif;
         }
     }
     return NULL;
@@ -210,12 +204,8 @@ void sys_arch_unprotect(sys_prot_t pval)
  * INTERNAL FUNCTIONS
  *=========================================================================*/
 
-static void lwipTimerCallback(cbTIMER_Id id, cb_int32 arg1, cb_int32 arg2)
+static void lwipTimerCallback()
 {
-    (void)id;
-    (void)arg1;
-    (void)arg2;
-
     sys_check_timeouts();
 }
 

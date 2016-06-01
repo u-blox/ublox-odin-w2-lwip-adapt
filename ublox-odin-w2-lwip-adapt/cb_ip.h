@@ -19,6 +19,8 @@
 #define _CB_IP_H_
 
 #include "cb_comdefs.h"
+#include "lwip/def.h"
+#include "arch/sys_arch.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -169,6 +171,8 @@ cb_char* cbIP_UTIL_ip6addr_ntoa(const cbIP_IPv6Address *addr, char *buf, int buf
 cb_boolean cbIP_gethostbyname(const cb_char *str, cbIP_IPv4Address* ip_addr, cbIP_addrResolvedCallback callback, void* arg);
 
 void cbIP_setDefaultNetif(cbIP_IPv4Address addr);
+
+u32_t sys_now();
 
 #ifdef __cplusplus
 }
