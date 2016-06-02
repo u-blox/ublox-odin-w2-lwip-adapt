@@ -1,6 +1,6 @@
 {
   "name": "ublox-odin-w2-lwip-adapt",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "u-blox ODIN-W2 adaptation layer for LWIP and WiF/BT/ethernet",
   "private": true,
   "keywords": [
@@ -22,8 +22,8 @@
   ],
   "dependencies": {
     "ualloc": "^1.0.0",
-    "sal-stack-lwip-ublox-odin-w2": "~0.0.3",
-    "ublox-odin-w2-drivers": "~0.0.4"
+    "sal-stack-lwip-ublox-odin-w2": "^1.0.0",
+    "ublox-odin-w2-drivers": "^1.0.0"
   },
   "targetDependencies": {},
   "testDependencies": {
