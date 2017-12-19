@@ -258,7 +258,10 @@ static void handleDataEvt(cbBCM_Handle connHandle, cb_uint8* pData, cb_uint16 le
     MBED_ASSERT(status);
 
     panIf.statusCallback(cbIP_NETWORK_ACTIVITY, NULL, NULL, panIf.callbackArg);
-    netif->input(pbuf, netif);
+    err_t err = netif->input(pbuf, netif);
+    if (err != ERR_OK) {
+        cbIP_freeDataFrame(pbuf);
+    }
 
     LINK_STATS_INC(link.recv);
 }

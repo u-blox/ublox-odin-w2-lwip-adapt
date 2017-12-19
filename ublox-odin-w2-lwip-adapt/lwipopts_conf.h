@@ -18,6 +18,19 @@
 #define __LWIPOPTS_CONF_H__
 
 /* Override LWIP options here */
+#define  LWIP_SUPPORT_CUSTOM_PBUF 1
+
+#undef MEM_SIZE
+#define MEM_SIZE                        (1024 * 24)
+
+#undef MEMP_SEPARATE_POOLS
+#define MEMP_SEPARATE_POOLS             1
+
+#undef MEMP_NUM_TCP_SEG
+#define MEMP_NUM_TCP_SEG                150//(30 * 3)    // should be at least TCP_SND_QUEUELEN (24) for each tcp socket (2 + any service).
+
+#undef PBUF_POOL_SIZE
+#define PBUF_POOL_SIZE                  119
 
 #endif // __LWIPOPTS_CONF_H__
 

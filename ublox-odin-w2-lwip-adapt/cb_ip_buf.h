@@ -70,6 +70,16 @@ cb_boolean cbIP_copyToDataFrame(cbIP_frame* frame, cb_uint8* buffer, cb_uint32 s
 cbIP_frame* cbIP_allocDataFrame(cb_uint32 size);
 
 /**
+* Allocate frame data from RAM memory.
+*
+* @param size              Number of bytes to allocate.
+* @return                  Pointer to the frame memory.
+*
+* @ref cbIP_freeDataFrame
+*/
+cbIP_frame* cbIP_allocDataFrameFromRAM(cb_uint32 size);
+
+/**
  * Destroy memory in frame data memory.
  *
  * @param frame             Pointer to the frame memory that should be destroyed.
@@ -84,6 +94,12 @@ void cbIP_freeDataFrame(cbIP_frame* frame);
  * @ref cbIP_allocDataFrame
  */
 cb_uint32 cbIP_getDataFrameSize(cbIP_frame* frame);
+
+cb_uint8* cbIP_getDataFramePayload(cbIP_frame* frame);
+
+void cbIP_DataFrameAddRef(cbIP_frame* frame);
+cb_uint8 cbIP_DataFrameDelRef(cbIP_frame* frame);
+
 
 typedef struct cbIP_memStats {
     cb_uint32 available;
@@ -117,8 +133,17 @@ typedef struct cbIP_Stats {
 
 void cbIP_getBufStats(cbIP_Stats* ipStats);
 
+cbIP_frame* cbIP_getNextFrame(cbIP_frame* frame);
+cb_uint32 cbIP_getDataSegmentSize(cbIP_frame* frame);
+
+typedef void (*data_free_f)(cbIP_frame* frame, void* arg0, void* arg1);
+cbIP_frame* cbIP_allocRefFrame(cb_uint8* payload, cb_uint32 size, data_free_f free, void* arg0, void* arg1);
+void cbIP_DataFrameChain(cbIP_frame* head, cbIP_frame* tail);
+cbIP_frame* cbIP_DataFrameDechain(cbIP_frame* frame);
+cbIP_frame* cbIP_DataFrameGather(cbIP_frame* frame);
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* _CB_IP_BUF_H_ */
+
