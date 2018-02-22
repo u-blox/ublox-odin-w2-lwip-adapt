@@ -69,35 +69,20 @@ cbIP_ethIf ethIf;
 /*===========================================================================
  * FUNCTIONS
  *=========================================================================*/
-static void packetIndication(cb_uint8* pBuf, cb_uint32 len)
+static void packetIndication(cbIP_frame* pBuf)
 {
     static cb_boolean firstTime = TRUE;
     if (firstTime) {
         netif_set_link_up(&ethIf.hInterface);
         firstTime = FALSE;
     }
-    struct pbuf* pbuf = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
-    if (pbuf != NULL) {
-        cb_uint32 bufferIndex = 0;
-        struct pbuf* pCurBuf = pbuf;
-        MBED_ASSERT(ethIf.hInterface.input != NULL);
-        MBED_ASSERT(len == pbuf->tot_len);
-
-        while (bufferIndex < len && pCurBuf != NULL) {
-            MBED_ASSERT(pCurBuf->payload != NULL);
-            MBED_ASSERT(pCurBuf->len <= (len - bufferIndex));
-            memcpy(pCurBuf->payload, pBuf + bufferIndex, pCurBuf->len);
-            bufferIndex += pCurBuf->len;
-            pCurBuf = pCurBuf->next;
-        }
-        MBED_ASSERT(pCurBuf == NULL);
-        MBED_ASSERT(bufferIndex == len);
-
-        if (ethIf.hInterface.input(pbuf, &ethIf.hInterface) != ERR_OK) {
-            pbuf_free(pbuf);
+    if (pBuf != NULL)
+    {
+        if (ethIf.hInterface.input(pBuf, &ethIf.hInterface) != ERR_OK)
+        {
+            pbuf_free(pBuf);
         }
     }
-
 }
 
 void cbIP_initEthInterfaceStatic(char* hostname, const cbIP_IPv4Settings * const IPv4Settings, cbIP_interfaceSettings const * const ifConfig, cbIP_statusIndication callback)
