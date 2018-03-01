@@ -17,6 +17,8 @@
 
 #define __CB_FILE__ "cbIP_ETH_IF"
 
+#ifdef CB_SUPPORT_ETH
+
 #include "cb_ip.h"
 
 #include "lwip/netif.h"
@@ -230,3 +232,4 @@ static void netif_status_callback(struct netif *netif)
         ethIf.statusCallback(cbIP_NETWORK_DOWN,ethIf.callbackArg, &ipV4Settings, &ipV6Settings);
     }
 }
+#endif /* CB_SUPPORT_ETH */
