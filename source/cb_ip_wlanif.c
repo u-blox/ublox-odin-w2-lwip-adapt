@@ -49,6 +49,8 @@
 
 #define IFNAME "wl0"
 
+#define cbWLAN_DEFAULT_HANDLE           ((cbWLAN_Handle)1)
+
 /*===========================================================================
  * TYPES
  *=========================================================================*/
@@ -273,8 +275,8 @@ static err_t cb_netif_init(struct netif* netif)
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
 
     cbWLAN_registerStatusCallback(statusIndication, &hIf->hInterface);
-    cbWLAN_registerPacketIndicationCallback(packetIndication, &hIf->hInterface);
-
+    cbWLAN_registerPacketIndicationCallback(cbWLAN_DEFAULT_HANDLE, packetIndication, &hIf->hInterface);
+ 
     return ERR_OK;
 }
 
@@ -298,7 +300,7 @@ static err_t low_level_output(struct netif* netif, struct pbuf* p)
     if (netif_is_link_up(netif)) {
         pbuf_ref(p);
         wlanIf.statusCallback(cbIP_NETWORK_ACTIVITY, NULL, NULL, wlanIf.callbackArg);
-        cbWLAN_sendPacket(p);
+        cbWLAN_sendPacket(cbWLAN_DEFAULT_HANDLE, p);
 
         LINK_STATS_INC(link.xmit);
 
