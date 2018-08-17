@@ -55,6 +55,7 @@ typedef struct
 typedef struct {
 
     cb_uint32   nBytes; // Number of bytes allocated from data byte array
+    cb_uint32   nBytesAllocated;
     cb_uint32   data[cbHEAP_FAST_SIZE / 4];
 } cbHEAP_Fast_Heap;
 
@@ -252,6 +253,7 @@ void *cbHEAP_fast_malloc(cb_uint32 size)
 
     if (found == TRUE) {
         pData = (void*)((cb_uint32)pBuffer + sizeof(cbHEAP_BufferHeader));
+        fheap.nBytesAllocated += cbHEAP_Fast_bufferSize[pBuffer->sizeIndex];
     } else {
         cb_ASSERT2(FALSE, size);
         return NULL;
@@ -272,6 +274,8 @@ void cbHEAP_fast_free(void* pBuf)
     cb_ASSERT(pBuffer->pNext == NULL);
     cb_ASSERT(pBuffer->sizeIndex < cbHEAP_FAST_N_BUFFER_SIZES);
 
+    fheap.nBytesAllocated -= cbHEAP_Fast_bufferSize[pBuffer->sizeIndex];
+
     pBuffer->free = TRUE;
 
     pBuffer->pNext = heapFastBuffers[pBuffer->sizeIndex];
@@ -280,7 +284,7 @@ void cbHEAP_fast_free(void* pBuf)
 
 cb_uint32 cbHEAP_getAllocatedHeap(void)
 {
-    return 0;
+    return fheap.nBytesAllocated;
 }
 
 void *cbHEAP_calloc(cb_uint32 count, cb_uint32 size)
@@ -301,6 +305,7 @@ static void fast_init(void)
 
     fheap.nBytes = 0;
     heapStatic.nBytes = 0;
+    fheap.nBytesAllocated = 0;
 
     for (i = 0; i < cbHEAP_FAST_N_BUFFER_SIZES; i++) {
         cbHEAP_Fast_bufferSize[i] = (cb_uint16)(cbHEAP_Fast_bufferSizeConfig[i] + sizeof(cbHEAP_BufferHeader)+cbHEAP_DBG_TAIL);
