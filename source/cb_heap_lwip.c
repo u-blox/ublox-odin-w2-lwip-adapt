@@ -122,6 +122,8 @@ static cbHEAP_Fast_Heap cbHEAP_FAST_SECTION_CONFIG_INLINE fheap;
 static cbHEAP_BufferHeader* heapFastBuffers[cbHEAP_FAST_N_BUFFER_SIZES];
 static cb_uint16 cbHEAP_Fast_bufferSize[cbHEAP_FAST_N_BUFFER_SIZES];
 
+static cb_boolean  freePoolClean = FALSE;
+
 #ifdef cbHEAP_STATISTICS
 static mem_statistics memstats[8];
 const cb_uint8 memtab_offset = 15;
@@ -279,6 +281,67 @@ void cbHEAP_fast_free(void* pBuf)
     heapFastBuffers[pBuffer->sizeIndex] = pBuffer;
 }
 
+void cbHEAP_fast_garbageCollect()
+{
+    cb_boolean found = TRUE;
+    cb_uint8* bufferEnd = NULL; //current buffer end pointer
+    cb_uint8* heapEnd = NULL; //heap end pointer
+#ifdef cbHEAP_GBG_CLCT_DEBUG
+    cb_uint32 count = 0;
+    cb_uint32 bytesFreed = 0;
+#endif //cbHEAP_GBG_CLCT_DEBUG
+    //Don't do garbage collect if the pool is clean
+    if (freePoolClean) {
+        return;
+    }
+
+    while (found) {
+        found = FALSE;
+        heapEnd = (cb_uint8*)fheap.data + fheap.nBytes;
+        /*
+        Search all  free buffer sizes for the last element on heap.
+        Free heap pool (heapFastBuffers) is sorted so only need to look at the last element.
+        */
+        for (cb_uint8 i = 0; (i < cbHEAP_FAST_N_BUFFER_SIZES) && !found; i++) {
+
+            cbHEAP_BufferHeader* pBuffer = heapFastBuffers[i];
+            if (pBuffer != NULL) {
+
+                cbHEAP_BufferHeader* pPrevBuffer = NULL;
+                //Get last element
+                while (pBuffer->pNext) {
+                    pPrevBuffer = pBuffer;
+                    pBuffer = pBuffer->pNext;
+                }
+                bufferEnd = (cb_uint8*)pBuffer + cbHEAP_Fast_bufferSize[pBuffer->sizeIndex];
+                if (bufferEnd == heapEnd) {
+                    //Last buffer on heap is free, lets remove it.
+                    if (pPrevBuffer == NULL) {
+                        heapFastBuffers[i] = NULL;
+                    } else {
+                        pPrevBuffer->pNext = NULL;
+                    }
+                    fheap.nBytes -= cbHEAP_Fast_bufferSize[pBuffer->sizeIndex];
+
+                    //Restart traversing the free buffers.
+                    found = TRUE;
+#ifdef cbHEAP_GBG_CLCT_DEBUG
+                    count++;
+                    bytesFreed += cbHEAP_Fast_bufferSize[pBuffer->sizeIndex];
+#endif //cbHEAP_GBG_CLCT_DEBUG
+                }
+            }
+        }
+    }
+#ifdef cbHEAP_GBG_CLCT_DEBUG
+    cbLOG_PRINT("\n==FAST HEAP GARBAGE COLLECT %d ITEMS TOTAL %d bytes========\n", count, bytesFreed);
+    if (count > 0){
+        printFastHeap();
+    }
+#endif //cbHEAP_GBG_CLCT_DEBUG
+    //Indicate that we cleaned the pool so no need to redo garbage collect until new elements has been freed
+    freePoolClean = TRUE;
+}
 cb_uint32 cbHEAP_getAllocatedHeap(void)
 {
 	return 0;
