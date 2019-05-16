@@ -298,7 +298,7 @@ static err_t wlanif_output_ipv6(struct netif *netif, struct pbuf *p, ip6_addr_t 
 static err_t low_level_output(struct netif* netif, struct pbuf* p)
 {
     if (netif_is_link_up(netif)) {
-        pbuf_ref(p);
+        //pbuf_ref(p);
         wlanIf.statusCallback(cbIP_NETWORK_ACTIVITY, NULL, NULL, wlanIf.callbackArg);
         cbWLAN_sendPacket(cbWLAN_DEFAULT_HANDLE, p);
 
