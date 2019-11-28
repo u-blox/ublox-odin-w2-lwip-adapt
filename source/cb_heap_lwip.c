@@ -45,23 +45,19 @@
 /*===========================================================================
  * TYPES
  *=========================================================================*/
-typedef struct
-{
-    cb_uint32   nBytes; // Number of bytes allocated from data byte array
-    cb_int8     data[cbHEAPSTATIC_SIZE];
-
-} cbHEAP_StaticHeap;
 
 typedef struct {
 
     cb_uint32   nBytes; // Number of bytes allocated from data byte array
+    cb_uint32   nBytesAllocated;
     cb_uint32   data[cbHEAP_FAST_SIZE / 4];
+    cb_boolean  freePoolClean;
 } cbHEAP_Fast_Heap;
 
-typedef struct cbHEAP_BufferHead 
+typedef struct cbHEAP_BufferHead
 {
 
-#ifdef cbHEAP_DEBUG    
+#ifdef cbHEAP_DEBUG
     cb_uint16                   check;
     cb_char                     *filename;
     cb_int16                    line;
@@ -71,9 +67,9 @@ typedef struct cbHEAP_BufferHead
     cb_uint8                    sizeIndex;
     cb_uint8                    align[2];
 
-    struct cbHEAP_BufferHead    *pNext; 
-        
-#ifdef cbHEAP_DEBUG    
+    struct cbHEAP_BufferHead    *pNext;
+
+#ifdef cbHEAP_DEBUG
     cb_uint16                   check2;
 #endif
 
@@ -98,16 +94,11 @@ struct memp_header {
  * DECLARATIONS
  *=========================================================================*/
 static void fast_init(void);
-#ifdef cbHEAP_DEBUG
-void *_cbHEAP_mallocStatic(cb_uint32 line, cb_char* filename, cb_uint32 size);
-#else
-void *cbHEAP_mallocStatic(cb_uint32 size);
-#endif
 
 #ifdef cbHEAP_STATISTICS
 static void decStatistics(void* pbuf);
 void incStatistics(cb_uint16 realsize, void* data);
-#else 
+#else
 #define decStatistics(x)
 #define incStatistics(x, y)
 #endif
@@ -115,15 +106,14 @@ void incStatistics(cb_uint16 realsize, void* data);
  * DEFINITIONS
  *=========================================================================*/
 
-static cbHEAP_StaticHeap cbHEAPSTATIC_SECTION_CONFIG_INLINE heapStatic;
 static const cb_uint16 cbHEAP_Fast_bufferSizeConfig[cbHEAP_FAST_N_BUFFER_SIZES] = cbHEAP_FAST_BUFFER_CONFIG;
 
 static cbHEAP_Fast_Heap cbHEAP_FAST_SECTION_CONFIG_INLINE fheap;
 static cbHEAP_BufferHeader* heapFastBuffers[cbHEAP_FAST_N_BUFFER_SIZES];
 static cb_uint16 cbHEAP_Fast_bufferSize[cbHEAP_FAST_N_BUFFER_SIZES];
 
-static cb_boolean  freePoolClean = FALSE;
-
+static void printFastHeap(void);
+static cbHEAP_BufferHeader* getFastHeapBuffer(cb_uint32 size);
 #ifdef cbHEAP_STATISTICS
 static mem_statistics memstats[8];
 const cb_uint8 memtab_offset = 15;
@@ -145,15 +135,6 @@ static cb_uint8 knownFree = 0;
  *=========================================================================*/
 void cbHEAP_init(void)
 {
-#ifdef cbHEAP_STATISTICS
-    heapStatic.nBytes = 0;
-    memset(memstats, 0xff, ELEMENTS_OF(memstats) * sizeof(mem_statistics));
-    for (int i = 0; i < ELEMENTS_OF(memstats); i++) {
-        cb_uint16* pRealSize = cbHEAP_mallocStatic(N_REAL_SIZE_ELEMENT * sizeof(cb_uint16));
-        memset(pRealSize, 0xff, N_REAL_SIZE_ELEMENT * sizeof(cb_uint16));
-        memstats[i].realSize = pRealSize;
-    }
-#endif
     fast_init();
 }
 
@@ -180,93 +161,50 @@ void cbHEAP_free(void* pBuf)
     }
 }
 
-#ifdef cbHEAP_DEBUG
-void *_cbHEAP_mallocStatic(cb_uint32 line, cb_char* filename, cb_uint32 size)
-#else
-void *cbHEAP_mallocStatic(cb_uint32 size)
-#endif
-{
-    cbHEAP_BufferHeader*    pBuffer;
-    void*                   pData;
-    cb_uint32               bufSize;
-
-#ifdef cbHEAP_DEBUG
-    cbLOG_PRINT("cbHEAP_mallocStatic(allocSize=%d, heapsizeLeft=%d, filename=%s, line=%d)\n", size, cbHEAPSTATIC_SIZE - heapStatic.nBytes, filename, line);
-#endif
-
-    bufSize = size + sizeof(cbHEAP_BufferHeader)+cbHEAP_DBG_TAIL;
-
-    // Make 4 bytes alignment
-    bufSize += bufSize % 4;
-
-#ifdef cbHEAP_MALLOC_RETURN_NULL
-    if ((cbHEAPSTATIC_SIZE - heapStatic.nBytes) < bufSize)
-    {
-        return NULL;
-    }
-#else
-    cb_ASSERTC((cbHEAPSTATIC_SIZE - heapStatic.nBytes) >= bufSize);
-#endif
-
-    pBuffer = (cbHEAP_BufferHeader*)&(heapStatic.data[heapStatic.nBytes]);
-
-    heapStatic.nBytes += bufSize;
-
-    pBuffer->pNext = (cbHEAP_BufferHeader*)bufSize; // Force buffer size into next buffer pointer.
-    pBuffer->free = FALSE;
-
-    pData = (void*)((cb_uint32)pBuffer + sizeof(cbHEAP_BufferHeader));
-
-    return pData;
-}
-
 void *cbHEAP_fast_malloc(cb_uint32 size)
 {
     cb_boolean          found = FALSE;
     cbHEAP_BufferHeader *pBuffer = NULL;
     void                *pData = NULL;
+    pBuffer = getFastHeapBuffer(size);
 
-    for (cb_uint8 i = 0; (i < cbHEAP_FAST_N_BUFFER_SIZES) && (found == FALSE); i++) {
-        if (cbHEAP_Fast_bufferSize[i] >= (size + sizeof(cbHEAP_BufferHeader) + cbHEAP_DBG_TAIL)) {
-            if (heapFastBuffers[i] != NULL) {
-                pBuffer = heapFastBuffers[i];
-                heapFastBuffers[i] = pBuffer->pNext;
+    if (NULL == pBuffer) {
+        //Alloc failed, Try garbage collect
+        cbLOG_PRINT("\nFast heap malloc of %d bytes failed, do garbage collect\n", size);
+        cbHEAP_fast_garbageCollect();
 
-                cb_ASSERT(pBuffer->free == TRUE);
-                cb_ASSERT(pBuffer->sizeIndex == i);
-
-                pBuffer->pNext = NULL;
-                pBuffer->free = FALSE;
-                found = TRUE;
-            } else if ((cb_uint32)(cbHEAP_FAST_SIZE - fheap.nBytes) >= (cb_uint32)(cbHEAP_Fast_bufferSize[i] + 3)) {
-                pBuffer = (cbHEAP_BufferHeader*)&(fheap.data[(fheap.nBytes + 3) / 4]);
-
-                fheap.nBytes += cbHEAP_Fast_bufferSize[i];
-
-                pBuffer->pNext = NULL;
-                pBuffer->free = FALSE;
-                pBuffer->sizeIndex = i;
-
-                found = TRUE;
+        //Try again to get a buffer
+        pBuffer = getFastHeapBuffer(size);
+        if (NULL == pBuffer) {
+            //Garbage collect failed, try to get memory from LWIP pool heap
+            pData = cbHEAP_malloc(size);
+            if (pData == NULL) {
+                //This code wont be reached since cbHEAP will assert if no mem is available
+                printFastHeap();
+                cb_ASSERT2(FALSE, size);
+                return NULL;
             }
         }
     }
-
-    if (found == TRUE) {
+    if (NULL != pBuffer) {
         pData = (void*)((cb_uint32)pBuffer + sizeof(cbHEAP_BufferHeader));
-    } else {
-        cb_ASSERT2(FALSE, size);
-        return NULL;
+        fheap.nBytesAllocated += cbHEAP_Fast_bufferSize[pBuffer->sizeIndex];
     }
     return pData;
 }
 
 void cbHEAP_fast_free(void* pBuf)
 {
-    cbHEAP_BufferHeader*    pBuffer = (cbHEAP_BufferHeader *)((cb_uint32)pBuf - sizeof(cbHEAP_BufferHeader));
     if (pBuf == NULL) {
         return; // Nothing to do.
     }
+    //check if not fast heap, then it is allocated from LWIP pool heap
+    if ((pBuf < (void*)&fheap) || (pBuf > (void*)((cb_uint8*)&fheap + cbHEAP_FAST_SIZE)))
+    {
+        cbHEAP_free(pBuf);
+        return;
+    }
+    cbHEAP_BufferHeader*    pBuffer = (cbHEAP_BufferHeader *)((cb_uint32)pBuf - sizeof(cbHEAP_BufferHeader));
 
     cb_ASSERT((cb_uint32*)pBuf >= fheap.data);
     cb_ASSERT((cb_uint32*)pBuf < (fheap.data + cbHEAP_FAST_SIZE / 4));
@@ -274,11 +212,31 @@ void cbHEAP_fast_free(void* pBuf)
     cb_ASSERT(pBuffer->pNext == NULL);
     cb_ASSERT(pBuffer->sizeIndex < cbHEAP_FAST_N_BUFFER_SIZES);
 
+    fheap.nBytesAllocated -= cbHEAP_Fast_bufferSize[pBuffer->sizeIndex];
 
     pBuffer->free = TRUE;
 
-    pBuffer->pNext = heapFastBuffers[pBuffer->sizeIndex];
-    heapFastBuffers[pBuffer->sizeIndex] = pBuffer;
+    /*
+    Sort pool to always have elements located first in heap to be first in pool.
+    This way we get fast malloc that always get the first available element on heap
+    Also we can maximize the garbage collection since there will be minimum blocking elements
+    */
+    cbHEAP_BufferHeader* pElement = heapFastBuffers[pBuffer->sizeIndex];
+    cbHEAP_BufferHeader* pPrevElement = NULL;
+
+    while ((pElement != NULL) && (pElement < pBuffer)) {
+        pPrevElement = pElement;
+        pElement = pElement->pNext;
+    }
+    if (NULL == pPrevElement) {
+        pBuffer->pNext = pElement;
+        heapFastBuffers[pBuffer->sizeIndex] = pBuffer;
+    }
+    else {
+        pBuffer->pNext = pPrevElement->pNext;
+        pPrevElement->pNext = pBuffer;
+    }
+    fheap.freePoolClean = FALSE;
 }
 
 void cbHEAP_fast_garbageCollect()
@@ -291,7 +249,7 @@ void cbHEAP_fast_garbageCollect()
     cb_uint32 bytesFreed = 0;
 #endif //cbHEAP_GBG_CLCT_DEBUG
     //Don't do garbage collect if the pool is clean
-    if (freePoolClean) {
+    if (fheap.freePoolClean) {
         return;
     }
 
@@ -340,11 +298,12 @@ void cbHEAP_fast_garbageCollect()
     }
 #endif //cbHEAP_GBG_CLCT_DEBUG
     //Indicate that we cleaned the pool so no need to redo garbage collect until new elements has been freed
-    freePoolClean = TRUE;
+    fheap.freePoolClean = TRUE;
 }
+
 cb_uint32 cbHEAP_getAllocatedHeap(void)
 {
-	return 0;
+    return fheap.nBytesAllocated;
 }
 
 void *cbHEAP_calloc(cb_uint32 count, cb_uint32 size)
@@ -364,7 +323,8 @@ static void fast_init(void)
     cb_uint32 i;
 
     fheap.nBytes = 0;
-    heapStatic.nBytes = 0;
+    fheap.nBytesAllocated = 0;
+    fheap.freePoolClean = TRUE;
 
     for (i = 0; i < cbHEAP_FAST_N_BUFFER_SIZES; i++) {
         cbHEAP_Fast_bufferSize[i] = (cb_uint16)(cbHEAP_Fast_bufferSizeConfig[i] + sizeof(cbHEAP_BufferHeader)+cbHEAP_DBG_TAIL);
@@ -377,6 +337,53 @@ static void fast_init(void)
     }
 }
 
+static cbHEAP_BufferHeader* getFastHeapBuffer(cb_uint32 size)
+{
+    cbHEAP_BufferHeader* pBuffer = NULL;
+    for (cb_uint8 i = 0; (i < cbHEAP_FAST_N_BUFFER_SIZES) && (pBuffer == NULL); i++) {
+        if (cbHEAP_Fast_bufferSize[i] >= (size + sizeof(cbHEAP_BufferHeader) + cbHEAP_DBG_TAIL)) {
+            if (heapFastBuffers[i] != NULL) {
+                pBuffer = heapFastBuffers[i];
+                heapFastBuffers[i] = pBuffer->pNext;
+
+                cb_ASSERT(pBuffer->free == TRUE);
+                cb_ASSERT(pBuffer->sizeIndex == i);
+
+                pBuffer->pNext = NULL;
+                pBuffer->free = FALSE;
+            } else if ((cb_uint32)(cbHEAP_FAST_SIZE - fheap.nBytes) >= (cb_uint32)(cbHEAP_Fast_bufferSize[i] + 3)) {
+                pBuffer = (cbHEAP_BufferHeader*)&(fheap.data[(fheap.nBytes + 3) / 4]);
+
+                fheap.nBytes += cbHEAP_Fast_bufferSize[i];
+
+                pBuffer->pNext = NULL;
+                pBuffer->free = FALSE;
+                pBuffer->sizeIndex = i;
+            }
+        }
+    }
+    return pBuffer;
+}
+
+static void printFastHeap()
+{
+    cbLOG_PRINT("\nn===========FAST HEAP STATS========\n");
+    cbLOG_PRINT("TotalHeapSize: %d Used: %d\n", fheap.nBytes, fheap.nBytesAllocated);
+    for (cb_uint8 i = 0; (i < cbHEAP_FAST_N_BUFFER_SIZES) ; i++) {
+        int count = 0;
+        cbHEAP_BufferHeader *pBufferPrint = heapFastBuffers[i];
+        if (pBufferPrint != NULL) {
+            count++;
+            while (pBufferPrint->pNext != NULL) {
+                count++;
+                pBufferPrint = pBufferPrint->pNext;
+            }
+        }
+        cbLOG_PRINT("BufferSize %d has %d elements free\n", cbHEAP_Fast_bufferSize[i], count);
+    }
+    cbLOG_PRINT("\n===========FAST HEAP STATS END ========\n");
+}
+
 #ifdef cbHEAP_STATISTICS
 void quickSort(cb_uint16 a[], cb_uint32 l, cb_uint32 r);
 cb_uint32 getHeapAllocation(cb_uint32 bufferIndex, cb_uint32* pBuffer, cb_uint32 maxSize)
@@ -386,7 +393,7 @@ cb_uint32 getHeapAllocation(cb_uint32 bufferIndex, cb_uint32* pBuffer, cb_uint32
     }
     cb_uint32 i = 0;
     cb_uint16* pRealSize = memstats[bufferIndex].realSize;
-    while (i < N_REAL_SIZE_ELEMENT &&  pRealSize[0]!= cb_UINT16_MAX && i < maxSize) {    
+    while (i < N_REAL_SIZE_ELEMENT &&  pRealSize[0]!= cb_UINT16_MAX && i < maxSize) {
         pBuffer[i] = pRealSize[i];
         i++;
     }
@@ -443,6 +450,7 @@ void decStatistics(void* pbuf)
         }
     }
 }
+
 void incStatistics(cb_uint16 realsize, void* data)
 {
     cb_int16 index = getpBufIndex(data);
