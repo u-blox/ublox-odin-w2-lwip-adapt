@@ -817,7 +817,7 @@ static void udpReceive(void* cb_UNUSED(pArg), struct udp_pcb* cb_UNUSED(pPCB), s
     if (pMsg->op == DHCP_OP_BOOTREQUEST) {
         /* Make a copy of fragmentated incoming pBuf into a continuous ram buffer
            for easier handling. */
-        pRequest = malloc(pBuf->tot_len);
+        pRequest = cbHEAP_malloc(pBuf->tot_len);
         if (pRequest) {
             pQ = pRequest;
             pI = pBuf;
@@ -831,7 +831,7 @@ static void udpReceive(void* cb_UNUSED(pArg), struct udp_pcb* cb_UNUSED(pPCB), s
 
             /* Do DHCP processing */
             handleRequest(pRequest);
-            free(pRequest);
+            cbHEAP_free(pRequest);
         }
     }
 
